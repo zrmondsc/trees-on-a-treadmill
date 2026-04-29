@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trees on a Treadmill — an Almond Paradox simulation</title>
+<meta name="description" content="A scenario-based game that puts you inside the technological treadmill described in Emily Reisman's The Almond Paradox.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Public+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="title-block">
+      <p class="kicker">A scenario-based simulation</p>
+      <h1>Trees <span class="amp">on a</span> Treadmill</h1>
+      <p class="byline">After Emily Reisman, <em>The Almond Paradox</em> (UC Press, 2025)</p>
+    </div>
+    <div class="masthead-meta">
+      <div class="meta-row"><span class="meta-label">Year</span><span class="meta-value" id="meta-year">—</span></div>
+      <div class="meta-row"><span class="meta-label">Spot price</span><span class="meta-value" id="meta-price">—</span></div>
+      <div class="meta-row"><span class="meta-label">5-yr supply growth</span><span class="meta-value" id="meta-projection">—</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- Splash / setup screen -->
+<section id="setup-screen" class="setup">
+  <div class="setup-inner">
+    <h2 class="setup-title">Begin a season</h2>
+    <p class="setup-lede">
+      You will run an almond orchard for 25 years. The market won't sit still.
+      Three other archetypes share the field with you: a Spanish rainfed
+      smallholder, a California intensive grower, an investor megaplanting.
+      Their decisions, and yours, accumulate into the price you all face.
+    </p>
+    <p class="setup-lede secondary">
+      Watch the <em>5-year supply growth</em> indicator at the top of the page.
+      That is the same nursery-sale forecast the Almond Board uses
+      <span class="cite">(Reisman p.&nbsp;14)</span> to decide when to panic. It will tell
+      you the future of prices before prices know themselves. The treadmill
+      runs on what people <em>expect</em>, not only what has happened.
+    </p>
+
+    <h3 class="setup-section">Pick your archetype</h3>
+    <div class="archetype-picker" id="archetype-picker">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="setup-actions">
+      <button class="btn btn-primary" id="start-btn" disabled>Begin year zero →</button>
+      <button class="btn btn-secondary" id="demo-btn">Watch the dynamics (auto-play)</button>
+      <p class="setup-hint">Pick an archetype above to begin.</p>
+    </div>
+
+    <details class="setup-about">
+      <summary>About the simulation</summary>
+      <p>
+        This is a teaching tool, not a forecast. Numbers are calibrated to
+        <em>feel</em> like Reisman's narrative. Four mechanisms from the book
+        drive the game:
+      </p>
+      <ol class="setup-mechanisms">
+        <li><strong>Cochrane's loop</strong> — adoption raises yields, diffusion raises supply, supply outpaces demand, prices fall, laggards must adopt, scale, or exit.</li>
+        <li><strong>Anticipatory adoption</strong> — trees take ~4 years to bear and ~20 to remove. The forecast itself drives planting before any actual crash.</li>
+        <li><strong>Marketing as collective technology</strong> — a USDA-style levy funds advertising that lifts demand. Lifted demand attracts new entrants. The strategy backfires.</li>
+        <li><strong>Input lock-in</strong> — intensive irrigation triggers salt accumulation. Pesticides erode pollinator health, raising honeybee rentals. The "needs" you accept compound.</li>
+      </ol>
+    </details>
+  </div>
+</section>
+
+<!-- Main game screen -->
+<main id="game-screen" class="game hidden">
+
+  <section class="panel chart-panel">
+    <h2 class="panel-title">The market<span class="panel-tag">Twenty-five-year horizon</span></h2>
+    <div class="charts">
+      <figure class="chart" id="price-chart-fig">
+        <figcaption class="chart-label">
+          <span>Price ($/lb)</span>
+          <span class="chart-sub">Reference price <code>$2.50</code></span>
+        </figcaption>
+        <svg id="price-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      </figure>
+      <figure class="chart" id="supply-chart-fig">
+        <figcaption class="chart-label">
+          <span>Supply (million lb)</span>
+          <span class="chart-sub">Solid: realized • Faint: 5-year projection</span>
+        </figcaption>
+        <svg id="supply-chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      </figure>
+    </div>
+  </section>
+
+  <section class="panel field-panel">
+    <h2 class="panel-title">The field<span class="panel-tag">Four orchards on the same market</span></h2>
+    <div class="field" id="field"></div>
+  </section>
+
+  <section class="panel decision-panel">
+    <h2 class="panel-title">Your move<span class="panel-tag">Year <span id="decision-year">0</span></span></h2>
+
+    <div class="decision-grid">
+      <div class="decision-block">
+        <label class="lbl">Plant new acres</label>
+        <div class="row">
+          <input type="number" id="plant-acres" min="0" max="2000" value="0" class="num">
+          <select id="plant-regime" class="sel">
+            <option value="rainfed">rainfed (low input, low yield)</option>
+            <option value="intensive" selected>intensive (drip, chemicals, bees)</option>
+            <option value="superintensive">superintensive hedgerow</option>
+          </select>
+        </div>
+        <p class="hint" id="plant-hint">Trees take 4 years to bear and 20 to remove. <span class="cite">(Reisman p.&nbsp;14)</span></p>
+      </div>
+
+      <div class="decision-block">
+        <label class="lbl">Remove acres (push out trees)</label>
+        <input type="number" id="remove-acres" min="0" max="2000" value="0" class="num">
+        <p class="hint">Cuts losses on declining or low-yielding cohorts.</p>
+      </div>
+
+      <div class="decision-block">
+        <label class="lbl">Voluntary marketing contribution ($)</label>
+        <input type="number" id="marketing-voluntary" min="0" max="100000000" step="10000" value="0" class="num">
+        <p class="hint">Above and beyond the levy. Lifts demand short-term, erodes long-term. <span class="cite">(p.&nbsp;15)</span></p>
+      </div>
+
+      <div class="decision-block" id="variety-block">
+        <label class="lbl">
+          <input type="checkbox" id="switch-variety">
+          Switch to self-compatible varieties
+        </label>
+        <p class="hint">Spanish Guara line, est. 1986. Costs $50,000, but eliminates honeybee rental.<span class="cite">(p.&nbsp;92)</span></p>
+      </div>
+    </div>
+
+    <div class="decision-actions">
+      <button class="btn btn-primary" id="advance-btn">Advance year →</button>
+      <span class="status" id="advance-status"></span>
+    </div>
+  </section>
+
+  <section class="panel log-panel">
+    <h2 class="panel-title">The record<span class="panel-tag">Yearbook</span></h2>
+    <ul class="log" id="log"></ul>
+  </section>
+</main>
+
+<!-- End-of-game screen -->
+<section id="end-screen" class="end hidden">
+  <div class="end-inner">
+    <h2 class="end-title">The season is over</h2>
+    <div class="end-summary" id="end-summary"></div>
+    <p class="end-coda">
+      There is no win condition. That is the point. The treadmill structures
+      the field of play. You can survive it, get rich and crash, or stay small
+      at the margin. None of these are failures of will — they are the shape
+      of agrarian capitalism Reisman is mapping. <span class="cite">(p. 14–16)</span>
+    </p>
+    <button class="btn btn-secondary" id="restart-btn">Begin another season</button>
+  </div>
+</section>
+
+<footer class="colophon">
+  <p>
+    Source code on <a href="https://github.com/" id="repo-link">GitHub</a> ·
+    Mechanics drawn from Emily Reisman, <em>The Almond Paradox: Cracking Open the
+    Politics of What Plants Need</em>, University of California Press, 2025.
+    Page references throughout link to specific arguments.
+  </p>
+</footer>
+
+<script src="game.js"></script>
+</body>
+</html>
